@@ -18,7 +18,7 @@ with engine.connect() as conn:
     except Exception:
         pass  # column already exists
 
-app = FastAPI(title="Pelemelo")
+app = FastAPI(title="Pelemello")
 
 app.add_middleware(
     CORSMiddleware,

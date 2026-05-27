@@ -13,3 +13,4 @@ data/*.db
 .hypothesis/
 .pytest_cache/
 .env
+config.yaml
