@@ -58,6 +58,7 @@ def list_tasks_for_project(project_id: int, db: Session = Depends(get_db)):
     result = []
     for task in tasks:
         subtasks = db.query(SubTask).filter(SubTask.task_id == task.id).all()
-        result.append(TaskDetail.from_orm(task).model_dump())
-        result[-1]["subtasks"] = [SubTaskOut.from_orm(s).model_dump() for s in subtasks]
+        detail = TaskDetail.model_validate(task).model_dump()
+        detail["subtasks"] = [SubTaskOut.model_validate(s).model_dump() for s in subtasks]
+        result.append(detail)
     return result

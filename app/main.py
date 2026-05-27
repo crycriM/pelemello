@@ -24,5 +24,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Routers
 app.include_router(projects.router)
 app.include_router(tasks.router)
+app.include_router(tasks.subtask_router)
 app.include_router(stt.router)
 app.include_router(discord.router)

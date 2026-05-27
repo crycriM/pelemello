@@ -1,0 +1,8 @@
+# Pelemelo configuration
+stt:
+  whisper_path: "/home/cricri/whisper.cpp/main"
+  models_dir: "/home/cricri/whisper.cpp/models"
+
+discord:
+  # Default webhook URL (can also be set per-project)
+  webhook_url: ""

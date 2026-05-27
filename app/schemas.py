@@ -25,8 +25,7 @@ class ProjectOut(ProjectBase):
     id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Task ---
@@ -54,8 +53,7 @@ class TaskOut(TaskBase):
     id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- SubTask ---
@@ -78,8 +76,7 @@ class SubTaskOut(SubTaskBase):
     task_id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Task with SubTasks ---
