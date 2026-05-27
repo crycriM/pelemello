@@ -32,6 +32,7 @@ class ProjectOut(ProjectBase):
 class TaskBase(BaseModel):
     title: str
     project_id: int
+    description: Optional[str] = None
     done: bool = False
     deadline: Optional[datetime] = None
     position: int = 0
@@ -44,6 +45,7 @@ class TaskCreate(TaskBase):
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
+    description: Optional[str] = None
     done: Optional[bool] = None
     deadline: Optional[datetime] = None
     position: Optional[int] = None

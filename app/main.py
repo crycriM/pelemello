@@ -9,6 +9,15 @@ from app.services import stt, discord
 
 Base.metadata.create_all(bind=engine)
 
+# Migrate existing DB: add description column to tasks table if missing
+with engine.connect() as conn:
+    import sqlalchemy
+    try:
+        conn.execute(sqlalchemy.text("ALTER TABLE tasks ADD COLUMN description TEXT"))
+        conn.commit()
+    except Exception:
+        pass  # column already exists
+
 app = FastAPI(title="Pelemelo")
 
 app.add_middleware(

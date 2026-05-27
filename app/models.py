@@ -24,6 +24,7 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     title = Column(String(500), nullable=False)
+    description = Column(Text, nullable=True)
     done = Column(Boolean, default=False)
     deadline = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

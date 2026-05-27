@@ -1,6 +1,7 @@
 // ===== Pelemelo Frontend =====
 const API = "/api";
 let currentProjectId = null;
+let currentProjectWebhook = null;
 let allTasks = {};
 let draggedTaskId = null;
 
@@ -26,14 +27,21 @@ async function loadProjects() {
     const li = document.createElement("li");
     li.textContent = p.name;
     li.dataset.id = p.id;
+    li.dataset.webhook = p.discord_webhook_url || "";
     if (p.id === currentProjectId) li.classList.add("active");
     li.addEventListener("click", () => selectProject(p.id, p.name));
+    li.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      openEditProject(p.id);
+    });
     list.appendChild(li);
   }
 }
 
 async function selectProject(id, name) {
   currentProjectId = id;
+  const activeLi = document.querySelector(`#project-list li[data-id="${id}"]`);
+  currentProjectWebhook = activeLi ? activeLi.dataset.webhook || null : null;
   document.querySelectorAll("#project-list li").forEach(li => {
     li.classList.toggle("active", parseInt(li.dataset.id) === id);
   });
@@ -48,13 +56,11 @@ async function addProject() {
   if (!name) return;
   const body = {
     name,
-    description: document.getElementById("project-desc").value.trim() || null,
     discord_webhook_url: document.getElementById("project-webhook").value.trim() || null,
   };
   await api("POST", "/projects", body);
   closeModal("modal-add-project");
   document.getElementById("project-name").value = "";
-  document.getElementById("project-desc").value = "";
   document.getElementById("project-webhook").value = "";
   await loadProjects();
 }
@@ -97,6 +103,14 @@ function createTaskCard(task) {
   title.className = "task-title";
   title.textContent = task.title;
   div.appendChild(title);
+
+  // Optional description
+  if (task.description) {
+    const desc = document.createElement("div");
+    desc.className = "task-desc";
+    desc.textContent = task.description;
+    div.appendChild(desc);
+  }
 
   const meta = document.createElement("div");
   meta.className = "task-meta";
@@ -186,6 +200,37 @@ document.querySelectorAll(".column-body").forEach(col => {
   });
 });
 
+// ===== Trash Zone =====
+const trashZone = document.getElementById("trash-zone");
+trashZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  trashZone.classList.add("drag-over");
+});
+trashZone.addEventListener("dragleave", () => trashZone.classList.remove("drag-over"));
+trashZone.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  trashZone.classList.remove("drag-over");
+  if (!draggedTaskId) return;
+  const taskId = draggedTaskId;
+  draggedTaskId = null;
+  try {
+    const result = await api("DELETE", `/tasks/${taskId}`);
+    if (result.project_deleted) {
+      // Reload projects list and reset to unselected state
+      currentProjectId = null;
+      document.getElementById("project-title").textContent = "Select a project";
+      document.getElementById("btn-add-task").style.display = "none";
+      document.getElementById("kanban-columns").style.display = "none";
+      await loadProjects();
+    } else {
+      await loadTasks();
+    }
+  } catch (err) {
+    console.error("Trash drop error:", err);
+  }
+});
+
 // ===== Task CRUD =====
 async function addTask() {
   const title = document.getElementById("task-title").value.trim();
@@ -193,11 +238,13 @@ async function addTask() {
   const body = {
     title,
     project_id: currentProjectId,
+    description: document.getElementById("task-desc").value.trim() || null,
     deadline: document.getElementById("task-deadline").value || null,
   };
   await api("POST", "/tasks", body);
   closeModal("modal-add-task");
   document.getElementById("task-title").value = "";
+  document.getElementById("task-desc").value = "";
   document.getElementById("task-deadline").value = "";
   await loadTasks();
 }
@@ -206,7 +253,8 @@ let editingTaskId = null;
 async function openEditTask(task) {
   editingTaskId = task.id;
   document.getElementById("edit-task-title").value = task.title;
-  document.getElementById("edit-task-deadline").value = task.deadline ? task.deadline.slice(0, 16) : "";
+  document.getElementById("edit-task-desc").value = task.description || "";
+  document.getElementById("edit-task-deadline").value = task.deadline ? task.deadline.slice(0, 10) : "";
   document.getElementById("modal-edit-task").style.display = "flex";
 }
 
@@ -215,11 +263,39 @@ async function saveEditTask() {
   if (!title || !editingTaskId) return;
   const body = {
     title,
+    description: document.getElementById("edit-task-desc").value.trim() || null,
     deadline: document.getElementById("edit-task-deadline").value || null,
   };
   await api("PUT", `/tasks/${editingTaskId}`, body);
   closeModal("modal-edit-task");
   await loadTasks();
+}
+
+// ===== Project Edit =====
+let editingProjectId = null;
+async function openEditProject(id) {
+  editingProjectId = id;
+  const li = document.querySelector(`#project-list li[data-id="${id}"]`);
+  document.getElementById("edit-project-name").value = li ? li.textContent : "";
+  document.getElementById("edit-project-webhook").value = li ? li.dataset.webhook || "" : "";
+  document.getElementById("modal-edit-project").style.display = "flex";
+}
+
+async function saveEditProject() {
+  const name = document.getElementById("edit-project-name").value.trim();
+  if (!name || !editingProjectId) return;
+  const body = {
+    name,
+    discord_webhook_url: document.getElementById("edit-project-webhook").value.trim() || null,
+  };
+  await api("PUT", `/projects/${editingProjectId}`, body);
+  // Update local state
+  currentProjectWebhook = body.discord_webhook_url;
+  if (editingProjectId === currentProjectId) {
+    document.getElementById("project-title").textContent = name;
+  }
+  closeModal("modal-edit-project");
+  await loadProjects();
 }
 
 // ===== Discord relay =====

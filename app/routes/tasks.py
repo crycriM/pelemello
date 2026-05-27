@@ -53,9 +53,21 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    project_id = task.project_id
     db.delete(task)
     db.commit()
-    return {"detail": "Task deleted"}
+
+    # Auto-delete project when its last task is removed
+    remaining = db.query(Task).filter(Task.project_id == project_id).count()
+    if remaining == 0:
+        from app.models import Project
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if project:
+            db.delete(project)
+            db.commit()
+            return {"detail": "Task deleted", "project_deleted": True, "project_id": project_id}
+
+    return {"detail": "Task deleted", "project_deleted": False}
 
 
 @router.post("/{task_id}/subtasks", response_model=SubTaskOut)

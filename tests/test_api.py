@@ -182,6 +182,51 @@ class TestTaskAPI:
         response = client.delete("/api/tasks/9999")
         assert response.status_code == 404
 
+    def test_delete_last_task_auto_deletes_project(self, client):
+        """Deleting the last task in a project should auto-delete the project."""
+        project = client.post("/api/projects", json={"name": "Vanishing"}).json()
+        project_id = project["id"]
+
+        task = client.post("/api/tasks", json={
+            "title": "Only task",
+            "project_id": project_id,
+        }).json()
+
+        response = client.delete(f"/api/tasks/{task['id']}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["detail"] == "Task deleted"
+        assert data["project_deleted"] is True
+        assert data["project_id"] == project_id
+
+        # Project should be gone — GET /tasks returns 404
+        response = client.get(f"/api/projects/{project_id}/tasks")
+        assert response.status_code == 404
+
+    def test_delete_task_keeps_project_when_tasks_remain(self, client):
+        """Deleting a task should NOT delete the project if other tasks exist."""
+        project = client.post("/api/projects", json={"name": "Staying"}).json()
+        project_id = project["id"]
+
+        client.post("/api/tasks", json={
+            "title": "Task to keep",
+            "project_id": project_id,
+        }).json()
+        task2 = client.post("/api/tasks", json={
+            "title": "Task to delete",
+            "project_id": project_id,
+        }).json()
+
+        response = client.delete(f"/api/tasks/{task2['id']}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["project_deleted"] is False
+
+        # Project should still exist
+        tasks = client.get(f"/api/projects/{project_id}/tasks").json()
+        assert len(tasks) == 1
+        assert tasks[0]["title"] == "Task to keep"
+
     def test_task_cascade_deletes_subtasks(self, client):
         project = client.post("/api/projects", json={"name": "Project"}).json()
         task = client.post("/api/tasks", json={
