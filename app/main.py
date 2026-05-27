@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, Base
@@ -18,8 +19,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+static_files = StaticFiles(directory="static")
+
+# Serve static files under /static
+app.mount("/static", static_files, name="static")
+
+# Root redirects to /static/index.html
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/static/index.html")
 
 # Routers
 app.include_router(projects.router)
